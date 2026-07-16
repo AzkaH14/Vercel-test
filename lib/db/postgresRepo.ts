@@ -1,4 +1,4 @@
-import { Pool } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 
 export interface Todo {
   id: string;
@@ -9,14 +9,14 @@ export interface Todo {
 
 export class PostgresRepo {
   private static instance: PostgresRepo;
-  private pool: Pool;
+  private sql: any;
 
   private constructor() {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error('Missing DATABASE_URL configuration in environment variables.');
     }
-    this.pool = new Pool({ connectionString });
+    this.sql = neon(connectionString);
   }
 
   public static getInstance(): PostgresRepo {
@@ -30,7 +30,7 @@ export class PostgresRepo {
    * Helper to ensure the tasks table exists.
    */
   private async ensureTable(): Promise<void> {
-    const query = `
+    await this.sql`
       CREATE TABLE IF NOT EXISTS todos (
         id VARCHAR(255) PRIMARY KEY,
         title TEXT NOT NULL,
@@ -38,7 +38,6 @@ export class PostgresRepo {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    await this.pool.query(query);
   }
 
   /**
@@ -46,10 +45,9 @@ export class PostgresRepo {
    */
   public async getTodos(): Promise<Todo[]> {
     await this.ensureTable();
-    const query = 'SELECT * FROM todos ORDER BY created_at DESC;';
-    const result = await this.pool.query(query);
+    const rows = await this.sql`SELECT * FROM todos ORDER BY created_at DESC;`;
     
-    return result.rows.map(row => ({
+    return rows.map((row: any) => ({
       id: row.id,
       title: row.title,
       completed: row.completed,
@@ -63,18 +61,15 @@ export class PostgresRepo {
   public async addTodo(title: string): Promise<Todo> {
     await this.ensureTable();
     
-    // Generate a unique ID (similar to the previous implementation)
     const id = `todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const createdAt = new Date().toISOString();
     
-    const query = `
+    const rows = await this.sql`
       INSERT INTO todos (id, title, completed, created_at)
-      VALUES ($1, $2, $3, $4)
+      VALUES (${id}, ${title}, false, ${createdAt})
       RETURNING *;
     `;
-    
-    const result = await this.pool.query(query, [id, title, false, createdAt]);
-    const row = result.rows[0];
+    const row = rows[0];
     
     return {
       id: row.id,
@@ -90,10 +85,9 @@ export class PostgresRepo {
   public async updateTodo(id: string, completed: boolean): Promise<boolean> {
     await this.ensureTable();
     
-    const query = 'UPDATE todos SET completed = $1 WHERE id = $2 RETURNING id;';
-    const result = await this.pool.query(query, [completed, id]);
+    const rows = await this.sql`UPDATE todos SET completed = ${completed} WHERE id = ${id} RETURNING id;`;
     
-    if (result.rowCount === 0) {
+    if (rows.length === 0) {
       throw new Error(`Todo with ID ${id} not found.`);
     }
     
@@ -106,10 +100,9 @@ export class PostgresRepo {
   public async deleteTodo(id: string): Promise<boolean> {
     await this.ensureTable();
     
-    const query = 'DELETE FROM todos WHERE id = $1 RETURNING id;';
-    const result = await this.pool.query(query, [id]);
+    const rows = await this.sql`DELETE FROM todos WHERE id = ${id} RETURNING id;`;
     
-    if (result.rowCount === 0) {
+    if (rows.length === 0) {
       throw new Error(`Todo with ID ${id} not found.`);
     }
     
