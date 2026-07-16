@@ -1,10 +1,10 @@
-import { GoogleSheetsRepo, Todo } from '../db/googleSheetsRepo';
+import { PostgresRepo, Todo } from '../db/postgresRepo';
 
 export class TodoService {
-  private repo: GoogleSheetsRepo;
+  private repo: PostgresRepo;
 
   constructor() {
-    this.repo = GoogleSheetsRepo.getInstance();
+    this.repo = PostgresRepo.getInstance();
   }
 
   /**
