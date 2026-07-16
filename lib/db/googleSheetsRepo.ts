@@ -154,7 +154,7 @@ export class GoogleSheetsRepo {
       const rows = response.data.values;
       if (!rows) return false;
 
-      const rowIndex = rows.findIndex((row) => row[0] === id);
+      const rowIndex = rows.findIndex((row: any[]) => row[0] === id);
       if (rowIndex === -1) {
         throw new Error(`Todo with ID ${id} not found.`);
       }
@@ -193,7 +193,7 @@ export class GoogleSheetsRepo {
       const rows = response.data.values;
       if (!rows) return false;
 
-      const rowIndex = rows.findIndex((row) => row[0] === id);
+      const rowIndex = rows.findIndex((row: any[]) => row[0] === id);
       if (rowIndex === -1) {
         throw new Error(`Todo with ID ${id} not found.`);
       }
